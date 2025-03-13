@@ -39,27 +39,29 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
+            set -e
             eval "${ssh-agent -s}"
             ssh-add ~/.ssh/ssh-praktikan4
+
+            echo "Update Node.js version"
+            curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+
             echo "Cek folder project";
-            [ ! -d "${HOME}/senpro/492878/modul02/senpro-github-action/" ] &&
-              {
-                echo "Repository belum di-clone. Cloning...";
-                mkdir -p ~/senpro/492878/modul02;
-                cd ~/senpro/492878/modul02;
-                git clone https://github.com/ThisIsYefta/senpro-github-action.git;
-                cd ~/senpro/492878/modul02/senpro-github-action;
-                echo "Install Package dan Build Project";
-                npm install;
-                npm run build;
-              } ||
-              {
-                echo "Repository sudah ada. Building...";
-                cd ~/senpro/492878/modul02/senpro-github-action;
-                git restore .;
-                git pull origin main;
-                echo "Install Package dan Build Project";
-                npm install;
-                npm run build;
-              }
- 
+            if [ ! -d "${HOME}/senpro/492878/modul02/senpro-github-action/" ]; then
+              echo "Repository belum di-clone. Cloning...";
+              mkdir -p ~/senpro/492878/modul02;
+              cd ~/senpro/492878/modul02;
+              git clone "https://github.com/ThisIsYefta/senpro-github-action.git";
+            else
+              echo "Repository sudah ada. Pulling updates...";
+              cd ~/senpro/492878/modul02/senpro-github-action;
+              git restore .;
+              git pull origin main || { echo "Gagal pull repository"; exit 1; }
+            fi
+
+            echo "Install Package dan Build Project";
+            npm cache clean --force;
+            npm install || { echo "Gagal install package"; exit 1; }
+            npm run build || { echo "Gagal build project"; exit 1; }
+          
